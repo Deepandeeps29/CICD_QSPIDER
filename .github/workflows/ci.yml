@@ -1,53 +1,64 @@
-name: Selenium CI Test
+name: CI Selenium Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  run-selenium-tests:
+  selenium:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📁 Checkout Code
-      uses: actions/checkout@v3
+      - name: 📁 Checkout Code
+        uses: actions/checkout@v3
 
-    - name: 🐍 Set Up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
-    - name: 📦 Install Dependencies
-      run: |
-        pip install -r requirements.txt
+      - name: 📦 Install Python Packages
+        run: |
+          pip install -r requirements.txt
 
-    - name: 🌐 Install Chrome & Matching ChromeDriver
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget curl unzip
+      - name: 🌐 Install Chrome & ChromeDriver (version matched)
+        run: |
+          sudo apt update
+          sudo apt install -y wget unzip curl
 
-        # Install Chrome
-        wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-        sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -fy install
+          # Install latest Chrome
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get install -f -y
 
-        # Detect installed Chrome version
-        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+' | head -1)
-        DRIVER_VERSION=$(curl -s https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION)
+          # Get major version
+          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+' | head -1)
+          MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d. -f1)
 
-        # Download and install ChromeDriver
-        wget -q -O chromedriver.zip https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip
-        unzip chromedriver.zip
-        chmod +x chromedriver
-        sudo mv chromedriver /usr/local/bin/
+          echo "Installed Chrome version: $CHROME_VERSION"
 
-    - name: ✅ Run Pytest Headless Tests
-      run: |
-        pytest tests/ --html=report.html --self-contained-html
+          # Get matching chromedriver version
+          DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$MAJOR_VERSION")
+          
+          if [ -z "$DRIVER_VERSION" ]; then
+            echo "❌ Could not find matching ChromeDriver for Chrome v$MAJOR_VERSION"
+            exit 1
+          fi
 
-    - name: 📤 Upload Test Report
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-report
-        path: report.html
+          echo "📥 Downloading ChromeDriver v$DRIVER_VERSION"
+          wget -q -O chromedriver.zip https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip
+          unzip -o chromedriver.zip
+          chmod +x chromedriver
+          sudo mv chromedriver /usr/local/bin/chromedriver
+          chromedriver --version
+
+      - name: ✅ Run Selenium Headless Test
+        run: |
+          pytest tests/ --html=report.html --self-contained-html
+
+      - name: 📤 Upload HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: report.html
