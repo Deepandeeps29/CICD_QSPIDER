@@ -1,4 +1,4 @@
-name: CI Selenium Test
+name: Selenium CI Test with Chrome v116
 
 on:
   push:
@@ -14,44 +14,35 @@ jobs:
       - name: 📁 Checkout Code
         uses: actions/checkout@v3
 
-      - name: 🐍 Setup Python
+      - name: 🐍 Set Up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
-      - name: 📦 Install Python Packages
+      - name: 📦 Install Python Dependencies
         run: |
           pip install -r requirements.txt
 
-      - name: 🌐 Install Chrome & ChromeDriver (version matched)
+      - name: 🌐 Install Chrome v116 and ChromeDriver v116
         run: |
-          sudo apt update
-          sudo apt install -y wget unzip curl
+          sudo apt-get update
+          sudo apt-get install -y wget unzip curl
 
-          # Install latest Chrome
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get install -f -y
+          # Install Chrome v116
+          wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/116.0.5845.96/linux64/chrome-linux64.zip
+          unzip chrome-linux64.zip
+          sudo mv chrome-linux64 /opt/chrome
+          sudo ln -s /opt/chrome/chrome /usr/bin/google-chrome
 
-          # Get major version
-          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+' | head -1)
-          MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d. -f1)
+          # Install ChromeDriver v116
+          wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/116.0.5845.96/linux64/chromedriver-linux64.zip
+          unzip chromedriver-linux64.zip
+          sudo mv chromedriver-linux64/chromedriver /usr/bin/chromedriver
+          sudo chmod +x /usr/bin/chromedriver
 
-          echo "Installed Chrome version: $CHROME_VERSION"
-
-          # Get matching chromedriver version
-          DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$MAJOR_VERSION")
-          
-          if [ -z "$DRIVER_VERSION" ]; then
-            echo "❌ Could not find matching ChromeDriver for Chrome v$MAJOR_VERSION"
-            exit 1
-          fi
-
-          echo "📥 Downloading ChromeDriver v$DRIVER_VERSION"
-          wget -q -O chromedriver.zip https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip
-          unzip -o chromedriver.zip
-          chmod +x chromedriver
-          sudo mv chromedriver /usr/local/bin/chromedriver
-          chromedriver --version
+          # Verify installed versions
+          /usr/bin/google-chrome --version
+          /usr/bin/chromedriver --version
 
       - name: ✅ Run Selenium Headless Test
         run: |
