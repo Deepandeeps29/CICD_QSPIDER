@@ -1,0 +1,40 @@
+name: CI Automation Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Install Chrome and Driver
+        run: |
+          sudo apt update
+          sudo apt install -y wget unzip xvfb
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome*.deb
+          CHROME_VERSION=$(google-chrome --version | grep -oP "\d+\.\d+\.\d+" | head -1)
+          wget https://chromedriver.storage.googleapis.com/${CHROME_VERSION}/chromedriver_linux64.zip || wget https://chromedriver.storage.googleapis.com/$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE)/chromedriver_linux64.zip
+          unzip chromedriver_linux64.zip
+          sudo mv chromedriver /usr/bin/chromedriver
+          sudo chmod +x /usr/bin/chromedriver
+
+      - name: Run Selenium Tests (Headless)
+        run: |
+          pytest tests/ --html=report.html
