@@ -1,4 +1,4 @@
-name: CI Automation Test - Selenium Headless
+name: CI Automation Test - Selenium
 
 on:
   push:
@@ -23,26 +23,26 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: 🌐 Install Google Chrome and Matching ChromeDriver
+      - name: 🌐 Install Google Chrome and ChromeDriver (matching)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip curl xvfb
-          
-          # Install latest stable Google Chrome
+          sudo apt update
+          sudo apt install -y curl unzip wget xvfb
+
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt install -y ./google-chrome-stable_current_amd64.deb
-          google-chrome --version
           
-          # Extract Chrome major version (e.g., 137)
-          CHROME_VERSION=$(google-chrome --version | grep -oP "\d+\.\d+\.\d+" | head -1 | cut -d. -f1)
-          
-          # Download matching ChromeDriver
-          echo "Fetching chromedriver for Chrome version $CHROME_VERSION"
-          DRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
-          wget -q -O chromedriver.zip "https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip"
-          unzip chromedriver.zip
-          chmod +x chromedriver
+          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+' | head -1)
+          MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d '.' -f 1)
+          echo "Installed Chrome version: $CHROME_VERSION (Major: $MAJOR_VERSION)"
+
+          DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}")
+          echo "Matching ChromeDriver version: $DRIVER_VERSION"
+          wget -q "https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip"
+          unzip chromedriver_linux64.zip
           sudo mv chromedriver /usr/bin/chromedriver
+          sudo chmod +x /usr/bin/chromedriver
+
+          google-chrome --version
           chromedriver --version
 
       - name: ✅ Run Selenium Tests (Headless)
